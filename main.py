@@ -11,13 +11,15 @@ with open("stories.json", encoding="utf-8") as f:
 def start(message):
     bot.send_message(message.chat.id, "مرحبًا بك في بوت قصص الأنبياء 🌟\nاكتب /list لرؤية جميع القصص.")
 
-@bot.message_handler(commands=["list"])
+@bot.message_handler(commands=['list'])
 def list_stories(message):
+    with open("stories.json", "r", encoding="utf-8") as f:
+        stories = json.load(f)
     buttons = [telebot.types.InlineKeyboardButton(text=s['name'], callback_data=s['name']) for s in stories]
-    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+    markup = telebot.types.InlineKeyboardMarkup()
     markup.add(*buttons)
-    bot.send_message(message.chat.id, "اختر نبيًا لعرض قصته:", reply_markup=markup)
-
+    bot.send_message(message.chat.id, "اختر قصة نبي:", reply_markup=markup)
+    
 @bot.message_handler(commands=["random"])
 def random_story(message):
     s = random.choice(stories)
