@@ -59,26 +59,48 @@ def story_by_name(message):
             return
     bot.send_message(message.chat.id, "❌ لم أجد قصة لهذا الاسم.")
 
-@bot.callback_query_handler(func=lambda call: call.data not in ["next_part", "end_story"])
+@bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
-    user_id = call.message.chat.id
     prophet_name = call.data
+    send_prophet_story(call.message, prophet_name)
 
-    for s in stories:
-        if s["name"] == prophet_name:
-            if isinstance(s["story"], list):
-                # تسجيل تقدم المستخدم
-                user_progress[user_id] = {"prophet": prophet_name, "part": 0}
-                first_part = s["story"][0]
+@bot.callback_query_handler(func=lambda call: call.data == "next_part")
+def handle_next_part(call):
+    user_id = call.message.chat.id
+    if user_id not in user_progress:
+        bot.answer_callback_query(call.id, "لا توجد قصة جارية.")
+        return
+
+    prophet_name = user_progress[user_id]["prophet"]
+    part_index = user_progress[user_id]["part"] + 1
+
+    with open("stories.json", "r", encoding="utf-8") as f:
+        stories = json.load(f)
+
+    for prophet in stories:
+        if prophet["name"] == prophet_name:
+            if part_index < len(prophet["story"]):
+                user_progress[user_id]["part"] = part_index
+                story_part = prophet["story"][part_index]
 
                 markup = types.InlineKeyboardMarkup()
-                if len(s["story"]) > 1:
+                if part_index < len(prophet["story"]) - 1:
                     markup.add(types.InlineKeyboardButton("التالي ⏭️", callback_data="next_part"))
+                else:
+                    markup.add(types.InlineKeyboardButton("✅ انتهت القصة", callback_data="end_story"))
 
-                bot.send_message(user_id, f"📖 قصة {prophet_name}\n\n{first_part}", reply_markup=markup)
-            else:
-                # إذا كانت القصة ليست مجزأة
-                bot.send_message(user_id, f"📖 قصة {prophet_name}\n\n{s['story']}")
-            break
+                bot.edit_message_text(
+                    chat_id=user_id,
+                    message_id=call.message.message_id,
+                    text=story_part,
+                    reply_markup=markup
+                )
+            return
+
+@bot.callback_query_handler(func=lambda call: call.data == "end_story")
+def end_story(call):
+    bot.answer_callback_query(call.id, "انتهت القصة ✅")
+
+
     
 bot.infinity_polling()
