@@ -11,68 +11,18 @@ user_progress = {}
 
 # عند بدء البوت
 @bot.message_handler(commands=['start'])
-def list_stories(message):
+def send_welcome(message):
     with open("stories.json", "r", encoding="utf-8") as f:
         stories = json.load(f)
 
-    markup = types.InlineKeyboardMarkup(row_width=3)  # <-- مهم: عدد الأزرار في كل سطر
-
-    buttons = []
+    markup = types.InlineKeyboardMarkup(row_width=3)
     for story in stories:
-        name = story.get('name')
-        if name:
-            buttons.append(types.InlineKeyboardButton(text=name, callback_data=name))
+        button = types.InlineKeyboardButton(
+            text=story["name"], callback_data=f"story_{story['name']}"
+        )
+        markup.add(button)
 
-    # نرتب الأزرار على شكل صفوف كل صف يحتوي 3 أزرار
-    for i in range(0, len(buttons), 3):
-        markup.row(*buttons[i:i+3])
-
-    bot.send_message(message.chat.id, "اختر اسم النبي لعرض قصته:", reply_markup=markup)
-
-@bot.callback_query_handler(func=lambda call: True)
-def handle_callback_query(call):
-    user_id = call.message.chat.id
-    prophet_name = call.data
-
-    # نقرأ القصص
-    with open("stories.json", "r", encoding="utf-8") as f:
-        stories = json.load(f)
-
-    # نحاول نلاقي القصة الخاصة بهذا النبي
-    for prophet in stories:
-        if prophet["name"] == prophet_name:
-            user_progress[user_id] = {
-                "prophet": prophet_name,
-                "part": 0
-            }
-
-            story_part = prophet["story"][0]
-            markup = types.InlineKeyboardMarkup()
-            if len(prophet["story"]) > 1:
-                markup.add(types.InlineKeyboardButton("التالي ⏭️", callback_data="next_part"))
-            bot.send_message(user_id, story_part, reply_markup=markup)
-            break
-
-    # متابعة القصة (زر التالي)
-    if call.data == "next_part":
-        if user_id in user_progress:
-            prophet_name = user_progress[user_id]["prophet"]
-            part = user_progress[user_id]["part"] + 1
-
-            with open("stories.json", "r", encoding="utf-8") as f:
-                stories = json.load(f)
-
-            for prophet in stories:
-                if prophet["name"] == prophet_name:
-                    if part < len(prophet["story"]):
-                        story_part = prophet["story"][part]
-                        user_progress[user_id]["part"] = part
-                        markup = types.InlineKeyboardMarkup()
-                        if part < len(prophet["story"]) - 1:
-                            markup.add(types.InlineKeyboardButton("التالي ⏭️", callback_data="next_part"))
-                        bot.send_message(user_id, story_part, reply_markup=markup)
-                    else:
-                        bot.send_message(user_id, "انتهت القصة ✅")
+    bot.send_message(message.chat.id, "📜 اختر قصة نبي من القائمة:", reply_markup=markup)
 
 # عند اختيار نبي من القائمة
 @bot.callback_query_handler(func=lambda call: call.data.startswith("story_"))
