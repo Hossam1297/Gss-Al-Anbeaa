@@ -25,6 +25,9 @@ def send_prophet_story(message, prophet_name):
             bot.send_message(user_id, story_part, reply_markup=markup)
             return
 
+with open("stories.json", "r", encoding="utf-8") as f:
+        stories = json.load(f) 
+
 @bot.message_handler(commands=["start"])
 def start(message):
     bot.send_message(message.chat.id, "مرحبًا بك في بوت قصص الأنبياء 🌟\nاكتب /list لرؤية جميع القصص.")
