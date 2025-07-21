@@ -4,6 +4,8 @@ import random
 
 bot = telebot.TeleBot("6686451745:AAHb1ZKud-ancEFkXdfPI7inPVXcTShXG98")
 
+user_progress = {}
+
 with open("stories.json", encoding="utf-8") as f:
     stories = json.load(f)
 
@@ -45,4 +47,41 @@ def handle_callback(call):
             bot.send_message(call.message.chat.id, f"📖 قصة {s['name']}\n\n{s['story']}")
             break
 
+@bot.callback_query_handler(func=lambda call: call.data == "next_part")
+def handle_next_part(call):
+    user_id = call.message.chat.id
+    if user_id not in user_progress:
+        bot.answer_callback_query(call.id, "لا توجد قصة جارية.")
+        return
+
+    prophet_name = user_progress[user_id]["prophet"]
+    part_index = user_progress[user_id]["part"] + 1
+
+    with open("stories.json", "r", encoding="utf-8") as f:
+        stories = json.load(f)
+
+    for prophet in stories:
+        if prophet["name"] == prophet_name:
+            if part_index < len(prophet["story"]):
+                user_progress[user_id]["part"] = part_index
+                story_part = prophet["story"][part_index]
+
+                markup = types.InlineKeyboardMarkup()
+                if part_index < len(prophet["story"]) - 1:
+                    markup.add(types.InlineKeyboardButton("التالي ⏭️", callback_data="next_part"))
+                else:
+                    markup.add(types.InlineKeyboardButton("✅ انتهت القصة", callback_data="end_story"))
+
+                bot.edit_message_text(
+                    chat_id=user_id,
+                    message_id=call.message.message_id,
+                    text=story_part,
+                    reply_markup=markup
+                )
+            return
+            
+@bot.callback_query_handler(func=lambda call: call.data == "end_story")
+def end_story(call):
+    bot.answer_callback_query(call.id, "انتهت القصة ✅")
+    
 bot.infinity_polling()
