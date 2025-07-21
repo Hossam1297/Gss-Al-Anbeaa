@@ -11,19 +11,23 @@ user_progress = {}
 
 # عند بدء البوت
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
+def list_stories(message):
     with open("stories.json", "r", encoding="utf-8") as f:
         stories = json.load(f)
 
-    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup = types.InlineKeyboardMarkup(row_width=3)  # <-- مهم: عدد الأزرار في كل سطر
+
+    buttons = []
     for story in stories:
-        button = types.InlineKeyboardButton(
-            text=story["name"], callback_data=f"story_{story['name']}"
-        )
-        markup.add(button)
+        name = story.get('name')
+        if name:
+            buttons.append(types.InlineKeyboardButton(text=name, callback_data=name))
 
-    bot.send_message(message.chat.id, "📜 اختر قصة نبي من القائمة:", reply_markup=markup)
+    # نرتب الأزرار على شكل صفوف كل صف يحتوي 3 أزرار
+    for i in range(0, len(buttons), 3):
+        markup.row(*buttons[i:i+3])
 
+    bot.send_message(message.chat.id, "اختر اسم النبي لعرض قصته:", reply_markup=markup)
 # عند اختيار نبي من القائمة
 @bot.callback_query_handler(func=lambda call: call.data.startswith("story_"))
 def show_story(call):
