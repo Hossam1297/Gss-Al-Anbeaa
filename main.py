@@ -28,6 +28,52 @@ def list_stories(message):
         markup.row(*buttons[i:i+3])
 
     bot.send_message(message.chat.id, "اختر اسم النبي لعرض قصته:", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callback_query(call):
+    user_id = call.message.chat.id
+    prophet_name = call.data
+
+    # نقرأ القصص
+    with open("stories.json", "r", encoding="utf-8") as f:
+        stories = json.load(f)
+
+    # نحاول نلاقي القصة الخاصة بهذا النبي
+    for prophet in stories:
+        if prophet["name"] == prophet_name:
+            user_progress[user_id] = {
+                "prophet": prophet_name,
+                "part": 0
+            }
+
+            story_part = prophet["story"][0]
+            markup = types.InlineKeyboardMarkup()
+            if len(prophet["story"]) > 1:
+                markup.add(types.InlineKeyboardButton("التالي ⏭️", callback_data="next_part"))
+            bot.send_message(user_id, story_part, reply_markup=markup)
+            break
+
+    # متابعة القصة (زر التالي)
+    if call.data == "next_part":
+        if user_id in user_progress:
+            prophet_name = user_progress[user_id]["prophet"]
+            part = user_progress[user_id]["part"] + 1
+
+            with open("stories.json", "r", encoding="utf-8") as f:
+                stories = json.load(f)
+
+            for prophet in stories:
+                if prophet["name"] == prophet_name:
+                    if part < len(prophet["story"]):
+                        story_part = prophet["story"][part]
+                        user_progress[user_id]["part"] = part
+                        markup = types.InlineKeyboardMarkup()
+                        if part < len(prophet["story"]) - 1:
+                            markup.add(types.InlineKeyboardButton("التالي ⏭️", callback_data="next_part"))
+                        bot.send_message(user_id, story_part, reply_markup=markup)
+                    else:
+                        bot.send_message(user_id, "انتهت القصة ✅")
+
 # عند اختيار نبي من القائمة
 @bot.callback_query_handler(func=lambda call: call.data.startswith("story_"))
 def show_story(call):
