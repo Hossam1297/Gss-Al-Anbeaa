@@ -6,9 +6,24 @@ import random
 bot = telebot.TeleBot("6686451745:AAHb1ZKud-ancEFkXdfPI7inPVXcTShXG98")
 
 user_progress = {}
+def send_prophet_story(message, prophet_name):
+    with open("stories.json", "r", encoding="utf-8") as f:
+        stories = json.load(f)
 
-with open("stories.json", encoding="utf-8") as f:
-    stories = json.load(f)
+    for prophet in stories:
+        if prophet["name"] == prophet_name:
+            user_id = message.chat.id
+            user_progress[user_id] = {
+                "prophet": prophet_name,
+                "part": 0
+            }
+
+            story_part = prophet["story"][0]
+            markup = types.InlineKeyboardMarkup()
+            if len(prophet["story"]) > 1:
+                markup.add(types.InlineKeyboardButton("التالي ⏭️", callback_data="next_part"))
+            bot.send_message(user_id, story_part, reply_markup=markup)
+            return
 
 @bot.message_handler(commands=["start"])
 def start(message):
